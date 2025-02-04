@@ -27,52 +27,40 @@ export default function ARScene() {
           throw new Error("Your browser doesn't support camera access.");
         }
 
-        // Carrega A-Frame
-        const aframeScript = document.createElement("script");
-        aframeScript.src = "https://aframe.io/releases/1.4.0/aframe.min.js";
-        await new Promise((resolve, reject) => {
-          aframeScript.onload = resolve;
-          aframeScript.onerror = () =>
-            reject(new Error("Failed to load A-Frame"));
-          document.head.appendChild(aframeScript);
-        });
-
-        // Carrega AR.js
-        const arjsScript = document.createElement("script");
-        arjsScript.src =
-          "https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js";
-        await new Promise((resolve, reject) => {
-          arjsScript.onload = resolve;
-          arjsScript.onerror = () => reject(new Error("Failed to load AR.js"));
-          document.head.appendChild(arjsScript);
-        });
-
-        // Cria a cena AR
+        // Cria a cena AR diretamente no HTML
         if (containerRef.current) {
-          const scene = document.createElement("a-scene");
-          scene.setAttribute("embedded", "");
-          scene.setAttribute(
-            "arjs",
-            "sourceType: webcam; debugUIEnabled: false;"
-          );
-          scene.setAttribute("vr-mode-ui", "enabled: false");
+          containerRef.current.innerHTML = `
+            <a-scene 
+              embedded 
+              arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+              renderer="logarithmicDepthBuffer: true;"
+              vr-mode-ui="enabled: false"
+            >
+              <a-marker preset="hiro">
+                <a-box position="0 0.5 0" material="color: red;"></a-box>
+              </a-marker>
+              <a-entity camera></a-entity>
+            </a-scene>
+          `;
 
-          // Adiciona o marcador e o cubo
-          const marker = document.createElement("a-marker");
-          marker.setAttribute("preset", "hiro");
+          // Adiciona os scripts após criar a estrutura
+          const aframeScript = document.createElement("script");
+          aframeScript.src =
+            "https://cdn.jsdelivr.net/gh/aframevr/aframe@1.4.0/dist/aframe-master.min.js";
+          document.head.appendChild(aframeScript);
 
-          const box = document.createElement("a-box");
-          box.setAttribute("position", "0 0.5 0");
-          box.setAttribute("material", "color: red;");
+          await new Promise((resolve) => {
+            aframeScript.onload = resolve;
+          });
 
-          marker.appendChild(box);
-          scene.appendChild(marker);
+          const arjsScript = document.createElement("script");
+          arjsScript.src =
+            "https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@master/aframe/build/aframe-ar.js";
+          document.head.appendChild(arjsScript);
 
-          const camera = document.createElement("a-entity");
-          camera.setAttribute("camera", "");
-
-          scene.appendChild(camera);
-          containerRef.current.appendChild(scene);
+          await new Promise((resolve) => {
+            arjsScript.onload = resolve;
+          });
 
           // Ajusta o vídeo quando ele for criado
           const observer = new MutationObserver(() => {
@@ -95,6 +83,7 @@ export default function ARScene() {
 
         setIsLoading(false);
       } catch (err) {
+        console.error("AR Error:", err);
         setError(
           err instanceof Error ? err.message : "Failed to initialize AR"
         );
@@ -106,9 +95,8 @@ export default function ARScene() {
 
     // Cleanup
     return () => {
-      const scene = document.querySelector("a-scene");
-      if (scene) {
-        scene.remove();
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
       }
     };
   }, []);
